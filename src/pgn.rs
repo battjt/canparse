@@ -515,6 +515,10 @@ fn parse_message(
     if msg.len() < 8 {
         return None;
     }
+    if msg.len() > 8 {
+        eprintln!("Unable to parse: {:?}", msg);
+        return None;
+    }
     let msg64: u64 = if little_endian {
         LittleEndian::read_u64(msg)
     } else {
