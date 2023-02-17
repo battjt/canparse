@@ -160,7 +160,7 @@ impl PgnLibrary {
     pub fn add_entry(&mut self, entry: Entry) -> Result<(), String> {
         use std::collections::hash_map::Entry as HashMapEntry;
 
-        let _id: u32 = *match entry {
+        let id: u32 = *match entry {
             Entry::MessageDefinition(MessageDefinition { ref id, .. }) => id,
             Entry::MessageDescription(MessageDescription { ref id, .. }) => id,
             Entry::MessageAttribute(MessageAttribute { ref id, .. }) => id,
@@ -179,10 +179,10 @@ impl PgnLibrary {
         };
 
         // CanId{ DP, PF, PS, SA } => Pgn{ PF, PS }
-        let pgn = (_id >> 8) & 0x1FFFF;
+        //let pgn = (_id >> 8) & 0x1FFFF;
 
-        self.last_id = _id;
-        match self.pgns.entry(pgn) {
+        self.last_id = id;
+        match self.pgns.entry(id) {
             HashMapEntry::Occupied(mut existing) => {
                 existing.get_mut().merge_entry(entry).unwrap();
             }
@@ -217,8 +217,7 @@ impl Default for PgnLibrary {
 /// Parameter Group Number definition
 #[derive(Debug, PartialEq, Clone)]
 pub struct PgnDefinition {
-    pub pgn: u32,
-    pub pgn_long: u32,
+    pub id: u32,
     pub name_abbrev: String,
     pub description: String,
     pub length: u32,
@@ -227,21 +226,26 @@ pub struct PgnDefinition {
 
 impl PgnDefinition {
     pub fn new(
-        pgn: u32,
-        pgn_long: u32,
+        id: u32,
         name_abbrev: String,
         description: String,
         length: u32,
         spns: HashMap<String, SpnDefinition>,
     ) -> Self {
         PgnDefinition {
-            pgn: pgn,
-            pgn_long: pgn_long,
-            name_abbrev: name_abbrev,
-            description: description,
-            length: length,
-            spns: spns,
+            id,
+            name_abbrev,
+            description,
+            length,
+            spns,
         }
+    }
+
+    pub fn sa(&self) -> u32 {
+        self.id & 0xFF
+    }
+    pub fn pgn(&self) -> u32 {
+        (self.id & 0x3FFFF00) >> 8
     }
 }
 // TODO: PgnDefinition Builder pattern
@@ -344,44 +348,29 @@ impl FromDbc for PgnDefinition {
         Self: Sized,
     {
         match entry {
-            Entry::MessageDefinition(MessageDefinition { id, name, .. }) => {
-                let pgn_long = id;
-                let pgn = pgn_long & 0x1FFFF;
-                Ok(PgnDefinition::new(
-                    pgn,
-                    pgn_long,
-                    name,
-                    "".to_string(),
-                    0,
-                    HashMap::new(),
-                ))
-            }
+            Entry::MessageDefinition(MessageDefinition { id, name, .. }) => Ok(PgnDefinition::new(
+                id,
+                name,
+                "".to_string(),
+                0,
+                HashMap::new(),
+            )),
             Entry::MessageDescription(MessageDescription {
                 id, description, ..
-            }) => {
-                let pgn_long = id;
-                let pgn = pgn_long & 0x1FFFF;
-                Ok(PgnDefinition::new(
-                    pgn,
-                    pgn_long,
-                    "".to_string(),
-                    description,
-                    0,
-                    HashMap::new(),
-                ))
-            }
-            Entry::MessageAttribute(MessageAttribute { id, .. }) => {
-                let pgn_long = id;
-                let pgn = pgn_long & 0x1FFFF;
-                Ok(PgnDefinition::new(
-                    pgn,
-                    pgn_long,
-                    "".to_string(),
-                    "".to_string(),
-                    0,
-                    HashMap::new(),
-                ))
-            }
+            }) => Ok(PgnDefinition::new(
+                id,
+                "".to_string(),
+                description,
+                0,
+                HashMap::new(),
+            )),
+            Entry::MessageAttribute(MessageAttribute { id, .. }) => Ok(PgnDefinition::new(
+                id,
+                "".to_string(),
+                "".to_string(),
+                0,
+                HashMap::new(),
+            )),
             _ => Err(DefinitionErrorKind::UnusedEntry(entry.get_type()).into()),
         }
     }
@@ -391,28 +380,19 @@ impl FromDbc for PgnDefinition {
             Entry::MessageDefinition(MessageDefinition {
                 id, message_len, ..
             }) => {
-                let pgn_long = id;
-                let pgn = pgn_long & 0x1FFFF;
-                self.pgn = pgn;
-                self.pgn_long = pgn_long;
+                self.id = id;
                 self.length = message_len;
                 Ok(())
             }
             Entry::MessageDescription(MessageDescription {
                 id, description, ..
             }) => {
-                let pgn_long = id;
-                let pgn = pgn_long & 0x1FFFF;
-                self.pgn = pgn;
-                self.pgn_long = pgn_long;
+                self.id = id;
                 self.description = description;
                 Ok(())
             }
             Entry::MessageAttribute(MessageAttribute { id, .. }) => {
-                let pgn_long = id;
-                let pgn = pgn_long & 0x1FFFF;
-                self.pgn = pgn;
-                self.pgn_long = pgn_long;
+                self.id = id;
                 Ok(())
             }
             Entry::SignalDefinition(wrapped) => {
