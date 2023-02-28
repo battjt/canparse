@@ -493,10 +493,11 @@ fn parse_message(
     msg: &[u8],
 ) -> Option<f32> {
     if msg.len() < 8 {
+        eprintln!("Unable to parse short message: {:?}", msg);
         return None;
     }
     if msg.len() > 8 {
-        eprintln!("Unable to parse: {:?}", msg);
+        eprintln!("Unable to parse long message: {:?}", msg);
         return None;
     }
     let msg64: u64 = if little_endian {
