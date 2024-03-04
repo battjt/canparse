@@ -195,8 +195,13 @@ impl PgnLibrary {
     }
 
     /// Returns a `PgnDefinition` entry reference, if it exists.
-    pub fn get_pgn(&self, pgn: u32) -> Option<&PgnDefinition> {
-        self.pgns.get(&pgn)
+    pub fn get_pgn(&self, id: u32) -> Option<&PgnDefinition> {
+        self.pgns.values().filter(|pgn| pgn.pgn() == id).next()
+    }
+
+    /// Returns a `PgnDefinition` entry reference, if it exists.
+    pub fn get_arbitration(&self, arb: u32) -> Option<&PgnDefinition> {
+        self.pgns.get(&arb)
     }
 
     /// Returns a `SpnDefinition` entry reference, if it exists.
@@ -492,11 +497,16 @@ fn parse_message(
     offset: f32,
     msg: &[u8],
 ) -> Option<f32> {
-    if msg.len() < 8 {
+    if msg.len() != 8 {
+        eprintln!("Unable to parse: {:?}", msg);
         return None;
     }
-    if msg.len() > 8 {
-        eprintln!("Unable to parse: {:?}", msg);
+    if start_bit >= 64 {
+        eprintln!("start_bit too large: {:?}", start_bit);
+        return None;
+    }
+    if bit_len >= 64 {
+        eprintln!("bit_len too large: {:?}", bit_len);
         return None;
     }
     let msg64: u64 = if little_endian {
@@ -827,6 +837,21 @@ mod tests {
             8031.88,
             "rpm".to_string()
         );
+        static ref SPNDEF1: SpnDefinition = SpnDefinition::new(
+            "Engine_Speed".to_string(),
+            190,
+            2364539904,
+            "A description for Engine speed.".to_string(),
+            65,
+            16,
+            true,
+            false,
+            0.125,
+            0.0,
+            0.0,
+            8031.88,
+            "rpm".to_string()
+        );
         static ref SPNDEF_BE: SpnDefinition = {
             let mut _spndef = SPNDEF.clone();
             _spndef.little_endian = false;
@@ -842,10 +867,24 @@ mod tests {
     }
 
     #[test]
-    fn get_spndefinition() {
+    fn get_spndefinition_by_pgn() {
+        println!("{:?}", PGNLIB_ONE.pgns);
         assert_eq!(
             *PGNLIB_ONE
                 .get_pgn(0xF004)
+                .expect("failed to get PgnDefinition from PgnLibrary")
+                .spns
+                .get("Engine_Speed")
+                .expect("failed to get SpnDefinition from PgnDefinition"),
+            *SPNDEF
+        );
+    }
+    #[test]
+    fn get_spndefinition_by_arb() {
+        println!("{:?}", PGNLIB_ONE.pgns);
+        assert_eq!(
+            *PGNLIB_ONE
+                .get_arbitration(2364539904)
                 .expect("failed to get PgnDefinition from PgnLibrary")
                 .spns
                 .get("Engine_Speed")
@@ -878,6 +917,11 @@ mod tests {
         assert_relative_eq!(SPNDEF_BE.parse_message(&MSG_BE[..]).unwrap(), 2728.5);
         assert!(SPNDEF.parse_message(&MSG[..7]).is_none());
         assert!(SPNDEF_BE.parse_message(&MSG_BE[..7]).is_none());
+    }
+
+    #[test]
+    fn test_parse_message1() {
+        assert!(SPNDEF1.parse_message(&MSG[..]).is_none());
     }
 
     #[test]
