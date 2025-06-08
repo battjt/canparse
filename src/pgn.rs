@@ -106,7 +106,7 @@ impl PgnLibrary {
             .and_then(|contents| {
                 encoding
                     .decode(contents.as_slice(), DecoderTrap::Replace)
-                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+                    .map_err(io::Error::other)
             })?;
 
         let mut i = data.as_str();
@@ -196,7 +196,7 @@ impl PgnLibrary {
 
     /// Returns a `PgnDefinition` entry reference, if it exists.
     pub fn get_pgn(&self, id: u32) -> Option<&PgnDefinition> {
-        self.pgns.values().filter(|pgn| pgn.pgn() == id).next()
+        self.pgns.values().find(|pgn| pgn.pgn() == id)
     }
 
     /// Returns a `PgnDefinition` entry reference, if it exists.
@@ -566,7 +566,7 @@ impl SpnDefinition {
     }
 }
 
-impl<'a> ParseMessage<&'a [u8; 8]> for SpnDefinition {
+impl ParseMessage<&[u8; 8]> for SpnDefinition {
     fn parse_message(&self, msg: &[u8; 8]) -> Option<f32> {
         parse_array(
             self.bit_len,
@@ -592,7 +592,7 @@ impl<'a> ParseMessage<&'a [u8; 8]> for SpnDefinition {
     }
 }
 
-impl<'a> ParseMessage<&'a [u8]> for SpnDefinition {
+impl ParseMessage<&[u8]> for SpnDefinition {
     fn parse_message(&self, msg: &[u8]) -> Option<f32> {
         parse_message(
             self.bit_len,

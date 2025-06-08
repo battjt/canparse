@@ -308,7 +308,7 @@ impl DbcLibrary {
             .and_then(|contents| {
                 encoding
                     .decode(contents.as_slice(), DecoderTrap::Replace)
-                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+                    .map_err(io::Error::other)
             })?;
 
         let mut i = data.as_str();
