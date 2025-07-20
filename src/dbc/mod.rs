@@ -182,7 +182,7 @@ impl Display for EntryType {
 
             EntryType::Unknown => "Unknown",
         };
-        write!(f, "{}", entry_str)
+        write!(f, "{entry_str}")
     }
 }
 
@@ -252,7 +252,7 @@ impl EntryErrorKind {
 impl Display for EntryErrorKind {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let s = self.__description();
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

@@ -42,8 +42,5 @@ extern crate byteorder;
 #[macro_use]
 extern crate nom;
 
-#[cfg(feature = "use-socketcan")]
-extern crate socketcan;
-
 pub mod dbc;
 pub mod pgn;
